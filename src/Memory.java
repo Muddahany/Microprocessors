@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 public class Memory {
-	HashMap<String,String> registers;
+	String[] Regs;
 	String regA;
 	String regB;
 	String regC;
@@ -16,9 +16,9 @@ public class Memory {
 
 	public Memory() {
 		mainMemory=new String[2^16];
-		registers= new HashMap<String,String>(8);
-		for (int i = 0; i < registers.size(); i++) {
-			registers.put("R"+i, "0");
+		Regs= new String[8];
+		for (int i = 0; i < Regs.length; i++) {
+			Regs[i]="0";
 		}
 		counter=0;
 		memory = new Cache[20];

@@ -7,6 +7,8 @@ public class trial {
 		m.addcache(l1);
 		m.addcache(l2);
 		m.addcache(l3);
-		
+		int a=3;
+		String s= Integer.toBinaryString(a);
+		System.out.println(s);
 	}
 }
