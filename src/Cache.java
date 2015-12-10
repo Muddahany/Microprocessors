@@ -9,7 +9,7 @@ public abstract class Cache {
 		miss=0;
 	}
 
-	public abstract CacheLine readData(String line);
+	public abstract String readData(String line);
 
 	public abstract void writeData(String line, String[] data);
 

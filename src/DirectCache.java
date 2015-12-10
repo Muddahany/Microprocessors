@@ -15,14 +15,16 @@ public class DirectCache extends Cache {
 		this.level = level;
 	}
 
-	public CacheLine readData(String line) {
+	public String readData(String line) {
+	
 		String tag = line.substring(0, tagsize);
 		int index = Integer.parseInt(line.substring(tagsize, indexsize + tagsize), 2);
 		int offset = Integer.parseInt(line.substring(indexsize + tagsize), 2);
 		// -------------------------------------------------------------------------------------
-		if (!direct[index].validityBit) {
+		if (direct[index].validityBit) {
 			// Miss
-			if (direct[index].tag != tag) {
+			if (!(direct[index].tag.equals(tag))) {
+				hit--;
 				miss++;
 				if (mode == "write-back") {
 					// ----------------------------------------/write-back\-----------------------------------
@@ -37,37 +39,33 @@ public class DirectCache extends Cache {
 						// lower
 						// memory
 					}
-					direct[index] = Memory.readData(line, level); // Read data
-																	// from
-																	// lower
-																	// memory
-																	// into
-																	// the cache
-																	// block
-
+					// Read data from memory into the cache block
+					direct[index].data[offset] = Memory.readData(line, level); 
+					direct[index].tag=tag;
 					direct[index].dirty = false;		 // mark block as non dirty
 				} else {
 					// ---------------------------------------/write-through\--------------------------------
-					direct[index] = Memory.readData(line, level); // Read data
-																	// from
-					// lower memory into
-					// the cache block
+					// Read data from memory into the cache block
+					direct[index].data[offset] = Memory.readData(line, level);
+					direct[index].tag=tag;
 				}
 				// -------------------------------------------------------------------------------------
 			}
-			return direct[index]; // return data
+			hit++;
+			return direct[index].data[offset]; // return data
 		}
 		return null;
 
 	}
-
+	
 	public void writeData(String line, String data) {
 		String tag = line.substring(0, tagsize);
 		int index = Integer.parseInt(line.substring(tagsize, indexsize), 2);
 		int offset = Integer.parseInt(line.substring(indexsize + tagsize), 2);
 		if (mode == "write-back") {
 			// ----------------------------------------/write-back\-----------------------------------
-			if (!(direct[index].tag == tag)) {
+			if (!(direct[index].tag.equals(tag))) {
+				hit--;
 				miss++;
 				if (direct[index].dirty) { // check dirty bit
 					Memory.writeToMemory(line, direct[index].data, level); // Write
@@ -78,11 +76,11 @@ public class DirectCache extends Cache {
 					// the lower
 					// memory
 				}
-				direct[index] = Memory.readData(line, level); // Read data from
-																// lower
-				// memory into the cache
-				// block
+				// Read data from memory into the cache block
+				direct[index].data[offset] = Memory.readData(line, level);
+				direct[index].tag=tag;
 			}
+			hit++;
 			// write new data to the cache black
 			direct[index].tag = tag;
 			direct[index].data[offset] = data;
@@ -93,7 +91,10 @@ public class DirectCache extends Cache {
 			if ((direct[index].tag == tag)) { // Hit
 				direct[index].data[offset] = data; // write new data to the
 													// cache block
+				hit++;
+				miss--;
 			}
+			miss++;
 			Memory.writeToMemory(line, direct[index].data, level); // write data
 																	// to
 																	// lower memory

@@ -1,6 +1,6 @@
 public class FullyAssociativeCache extends Cache {
 	CacheLine[] full;
-	private String mode;
+	String mode;
 	int level;
 
 	public FullyAssociativeCache(int s, int l, int level) {
@@ -14,39 +14,38 @@ public class FullyAssociativeCache extends Cache {
 		this.level = level;
 	}
 
-	public CacheLine readData(String line) {
+	public String readData(String line) {
 		String tag = line.substring(0, tagsize);
 		int offset = Integer.parseInt(line.substring(tagsize), 2);
 		// ---------------------------------------//Hit\\----------------------------------------------
-		for (int i = 0; i < full.length && full[i].validityBit && full[i].tag == tag; i++) {
+		for (int i = 0; i < full.length && full[i].validityBit && full[i].tag.equals(tag); i++) {
 			full[i].used++;
 			hit++;
-			return full[i];
+			return full[i].data[offset];
 		}
 		// ........................................Miss...........................................
 		int LRU = this.getLRUindex(); // first free space or least recently used
-		miss++;						  // index
+		miss++; // index
+		full[LRU].used++;
 		if (mode == "write-back") {
 			// -------------------------------/write-back\-----------------------------------
 			if (full[LRU].dirty) { // check dirty bit
-				Memory.writeToMemory(line, full[LRU].data, level); // write
-																	// to
-				// lower memory
+				// write to lower memory
+				Memory.writeToMemory(line, full[LRU].data, level);
 			}
-			full[LRU] = Memory.readData(line, level); // Read data from
-														// lower
-			// memory into the cache
-			// block
+			// Read data from memory into the cache block
+			full[LRU].data[offset] = Memory.readData(line, level);
+			full[LRU].tag = tag;
 			full[LRU].dirty = false; // mark block as non dirty
 		} else {
 			// -----------------------------/write-through\--------------------------------
-			full[LRU] = Memory.readData(line, level); // Read data from
-														// lower
-			// memory into the cache
-			// block
+			// Read data from memory into the cache block
+			full[LRU].data[offset] = Memory.readData(line, level);
+			full[LRU].tag = tag;
+
 		}
 		// -------------------------------------------------------------------------------------
-		return full[LRU]; // return data
+		return full[LRU].data[offset]; // return data
 	}
 
 	public void writeData(String line, String data) {
@@ -56,35 +55,40 @@ public class FullyAssociativeCache extends Cache {
 		// ----------------------------------------/write-back\--------------------------------
 		if (mode == "write-back") {
 			// ------------------------------------//Hit\\-------------------------------
-			for (int i = 0; i < full.length && full[i].validityBit && full[i].tag == tag; i++) {
+			for (int i = 0; i < full.length && full[i].validityBit && full[i].tag.equals(tag); i++) {
 				full[i].used++;
 				full[i].data[offset] = data;
 				full[i].dirty = true;
+				hit++;
 				return;
 			}
 			// ------------------------------------//Miss\\-------------------------------
+			miss++;
 			if (full[LRU].dirty) { // check dirty bit
 				Memory.writeToMemory(line, full[LRU].data, level); // write to
 																	// lower
 				// memory
 			}
-			full[LRU] = Memory.readData(line, level); // Read data from lower
-														// memory
-			// into the cache block
+			// Read data from memory into the cache block
+			full[LRU].data[offset] = Memory.readData(line, level);
+			full[LRU].tag = tag;
+			full[LRU].used++;
+
 			return;
 		}
 		// ---------------------------------------/Hit-write-through\--------------------------------
-		for (int i = 0; i < full.length && full[i].validityBit && full[i].tag == tag; i++) {
+		for (int i = 0; i < full.length && full[i].validityBit && full[i].tag.equals(tag); i++) {
 			full[i].used++;
 			full[i].data[offset] = data;
+			hit++;
 			Memory.writeToMemory(line, full[i].data, level);
 			return;
 		}
 		// ---------------------------------------/Miss-write-through\--------------------------------
 		String[] dataa = { data };
+		miss++;
 		Memory.writeToMemory(line, dataa, level); // write data to lower memory
 	}
-	// -------------------------------------------------------------------------------------
 
 	public int getLRUindex() {
 		int min = full[0].used;

@@ -1,0 +1,5 @@
+200
+add r1, r2, r3
+addi r2, r3, r4
+sub r6, r1, r2
+lw r5, r6, 8

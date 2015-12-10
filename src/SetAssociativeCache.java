@@ -12,21 +12,21 @@ public class SetAssociativeCache extends Cache {
 			set[i] = new CacheLine(l);
 		}
 		offsetsize = (int) (Math.log(l) / Math.log(2));
-		indexsize = (int) (Math.log(s / l*m) / Math.log(2));
+		indexsize = (int) (Math.log((s / (l*m))) / Math.log(2));
 		tagsize = 16 - offsetsize - indexsize;
 		this.level=level;
 	}
 
-	public CacheLine readData(String line) {
+	public String readData(String line) {
 		String tag = line.substring(0, tagsize);
-		int index = Integer.parseInt(line.substring(tagsize, indexsize + tagsize), 2);
+		int index = Integer.parseInt(line.substring(tagsize, indexsize + tagsize), 2)*m;
 		int offset = Integer.parseInt(line.substring(indexsize + tagsize), 2);
 		// -------------------------------------------------------------------------------------
-		for (int i = 0; i < m && set[index + i].tag == tag; i++) {
+		for (int i = 0; i < m && set[index + i].tag.equals(tag); i++) {
 			if (set[index].validityBit) {
 				set[index+i].used++;
 				hit++;
-				return set[index + i];
+				return set[index + i].data[offset];
 			} else {
 				return null;
 			}
@@ -47,28 +47,29 @@ public class SetAssociativeCache extends Cache {
 															// lower
 															// memory
 			}
-			set[LRU] = Memory.readData(line,level); // Read data from
-												// lower memory into
-												// the cache block
+			// Read data from memory into the cache block
+			set[LRU].data[offset] = Memory.readData(line, level);
+			set[LRU].tag=tag;
 			set[LRU].dirty = false; // mark block as non dirty
 		} else {
 			// ---------------------------------------/write-through\--------------------------------
-			set[LRU] = Memory.readData(line,level); // Read data from
-												// lower memory into
-												// the cache block
+			// Read data from memory into the cache block
+			set[LRU].data[offset] = Memory.readData(line, level);
+			set[LRU].tag=tag;
 		}
 		// -------------------------------------------------------------------------------------
-		return set[LRU];
+		set[LRU].used++;
+		return set[LRU].data[offset];
 	}
 
 	public void writeData(String line, String data) {
 		String tag = line.substring(0, tagsize);
-		int index = Integer.parseInt(line.substring(tagsize, indexsize), 2);
+		int index = Integer.parseInt(line.substring(tagsize, indexsize), 2)*m;
 		int offset = Integer.parseInt(line.substring(indexsize + tagsize), 2);
 
 		if (mode == "write-back") {
 			// ----------------------------------------/write-back\-----------------------------------
-			for (int i = 0; i < m && set[index + i].tag == tag; i++) {
+			for (int i = 0; i < m && set[index + i].tag.equals(tag); i++) {
 				set[index+i].used++;
 				set[index + i].data[offset] = data; // write new data to the
 													// cache black
@@ -86,13 +87,14 @@ public class SetAssociativeCache extends Cache {
 															// the lower
 															// memory
 			}
-			set[LRU] = Memory.readData(line,level); // Read data from lower
-												// memory into the cache
-												// block
+			// Read data from memory into the cache block
+			set[LRU].data[offset] = Memory.readData(line, level);
+			set[LRU].tag=tag;
+			set[LRU].used++;
 
 		} else {
 			// ---------------------------------------/write-through\--------------------------------
-			for (int i = 0; i < m && set[index + i].tag == tag; i++) {
+			for (int i = 0; i < m && set[index + i].tag.equals(tag); i++) {
 				set[index+i].used++;
 				set[index + i].data[offset] = data; // write new data to the
 													// cache black
